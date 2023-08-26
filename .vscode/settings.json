@@ -1,0 +1,8 @@
+{
+    "codeBlocks.ignoredLanguageIds": [
+        "typescript",
+        "less",
+        "properties",
+        "plaintext"
+    ]
+}
