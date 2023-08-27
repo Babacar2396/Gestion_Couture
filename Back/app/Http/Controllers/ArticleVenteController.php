@@ -5,13 +5,17 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreArticleVenteRequest;
 use App\Http\Requests\UpdateArticleVenteRequest;
 use App\Models\ArticleVente;
+use App\Models\Breukh;
+use App\Models\Article;
 use App\Http\Resources\ArticleVenteResource;
+use App\Http\Resources\dataCollection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Http\Resources\ArticleResource;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Categorie;
+use Illuminate\Http\Request;
 
 
 class ArticleVenteController extends Controller
@@ -21,40 +25,36 @@ class ArticleVenteController extends Controller
      */
     public function index()
     {
-        $articles = ArticleVente::all();
-        return response()->json([
-            'data'=>
-                [
-                    'articlesVentes' => ArticleVenteResource::collection($articles)
-                ]
-        ]);
+        $articles = ArticleVenteResource::collection(ArticleVente::all());
+
+        return dataCollection::RestRules(
+            "Listes des articles de vente", 
+            $articles, 
+            true,
+            200
+        );
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreArticleVenteRequest $request)
+    public function store(Request $request)
     {
         return DB::transaction(function () use ($request) {
         
             $article = new ArticleVente();
             
-            $cat = Categorie::where('libelle', $request->validated()['categorie_libelle'])->first();
+            $cat = Categorie::where('libelle', $request['categorie_libelle'])->first();
             if (!$cat) {
                 throw new \Exception('Catégorie introuvable');
             }
             $article->categorie_id = $cat->id;
-            $article->libelle = $request->validated()['libelle'];
-            $article->promo = $request->validated()['promo'];
-            if ($request->validated()['promo'] == 1) {
-                $article->valeur = $request->validated()['valeur']; 
+            $article->libelle = $request['libelle'];
+            $article->promo = $request['promo'];
+            if ($request['promo'] == 1) {
+                $article->valeur = $request['valeur']; 
             }
             
-            $article->cout = $request->validated()['cout'];
-            if ($request->marge) {
-                $article->marge = $request->validated()['marge'];
-                $article->prix_vente = $request->validated()['cout'] + $request->validated()['marge'];
-            }
             $article->qteStock = 20;
 
             // $imagePath = str_replace('data:image/jpeg;base64,', '', $request->photo_name);
@@ -65,30 +65,149 @@ class ArticleVenteController extends Controller
             // } else {
             //     throw new \Exception('Erreur lors de l\'insertion de l\'image');
             // }
-
             $libellePrefix = substr($article->libelle, 0, 3);
             $categorieText = $article->categorie->libelle;
-            $orderNumber = 1;
+            $orderNumber = $article->categorie->numArticles + 1;
             $reference = "REF-$libellePrefix-$categorieText-$orderNumber";
             $article->reference = $reference;
+
+            $cat->update(['numArticles' => $orderNumber]);
+
+            $cout = 0;
             
+            if ( count($request['articlesConfection']) < 3 ){
+                return response()->json(['message' => 'Articles de confection fourni insuffisants']);
+            }
+
+            $requiredConfections = ["tissu", "bouton", "fil"];
+            $cateFourni = [];
+            foreach ($request['articlesConfection'] as $value) {
+                $catego = key($value);
+                $cateFourni[] = $catego;
+            }
+            $missingConfections = array_diff($requiredConfections, $cateFourni);
+
+            if (!empty($missingConfections)) {
+               return response()->json(['message' => 'Il manque des categories de confection', 'data'=>$missingConfections]); 
+            }
+
+            foreach ($request['articlesConfection'] as $confectionItem) {
+                $key = key($confectionItem);
+                $articleName = $confectionItem[$key];
+                $quantity = $confectionItem['quantity'];
+                
+                $articleConf = Article::where('libelle', $articleName)->first();
+
+                if ($quantity > $articleConf->stock) {
+                    throw new \Exception('Le stock disponible est insuffisant');
+                }
+                $cout += $articleConf->prix * $quantity;
+                $articleConf->update(['stock' => $articleConf->stock - $quantity]);
+            }
+            $article->cout = $cout;
+            $article->marge = $request['marge'];
+            $article->prix_vente = $cout + $request['marge'];
+
             $article->save();
 
-            return response()->json(
-                [
-                    'message' => 'Article créé avec succès', 
-                    'data' => $article, 
-                    'status' => 201
-                ]);
+            foreach ($request['articlesConfection'] as $confectionItem) {
+                $key = key($confectionItem);
+                $articleName = $confectionItem[$key];
+                $quantity = $confectionItem['quantity'];
+
+                $articleConf = Article::where('libelle', $articleName)->first();
+                
+                $breukh = new Breukh();
+                $breukh->qte = $quantity;
+                $breukh->article_id = $articleConf->id;
+                $breukh->article_vente_id = $article->id;
+                $breukh->save();
+            }            
+
+            return dataCollection::RestRules(
+                "article de vente ajouté avec succès", 
+                $article, 
+                true,
+                200
+            );
         });
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateArticleVenteRequest $request, ArticleVente $articleVente)
+
+    public function update(Request $request, $articleVenteId)
     {
-        //
+        $article = ArticleVente::find($articleVenteId);
+
+        $article->update(['libelle' => $request->libelle]);
+        $article->update(['promo' => $request->promo]);
+        if ($request->input('promo') == 1) {
+            $article->update(['valeur' => $request->valeur]);
+        }
+
+        if (count($request->articlesConfection) < 3 ) {
+            return response()->json(['message' => 'Articles de confection fournis insuffisants'], 400);
+        }
+
+        $requiredConfections = ["tissu", "bouton", "fil"];
+        $cateFourni = [];
+        foreach ($request->articlesConfection as $value) {
+            $catego = key($value);
+            $cateFourni[] = $catego;
+        }
+        $missingConfections = array_diff($requiredConfections, $cateFourni);
+
+        if (!empty($missingConfections)) {
+            return response()->json(['message' => 'Il manque des categories de confection', 'data'=>$missingConfections]); 
+        }
+
+        $cout = 0;
+
+        foreach ($request->articlesConfection as $confectionItem) {
+            $key = key($confectionItem);
+            $articleName = $confectionItem[$key];
+            $quantity = $confectionItem['quantity'];
+
+            $articleConf = Article::where('libelle', $articleName)->first();
+
+            if ($quantity > $articleConf->stock) {
+                throw new \Exception('Le stock disponible est insuffisant');
+            }
+
+            $cout += $articleConf->prix * $quantity;
+            $articleConf->decrement('stock', $quantity);
+        }
+
+        $article->cout = $cout;
+        $article->update(['marge' => $request->marge]);
+        $article->update(['prix_vente' => $cout + $request->marge]);
+
+        $article->save();
+        $article->article()->detach();
+
+        foreach ($request['articlesConfection'] as $confectionItem) {
+            $key = key($confectionItem);
+            $articleName = $confectionItem[$key];
+            $quantity = $confectionItem['quantity'];
+
+            $articleConf = Article::where('libelle', $articleName)->first();
+            
+            $breukh = new Breukh();
+            $breukh->qte = $quantity;
+            $breukh->article_id = $articleConf->id;
+            $breukh->article_vente_id = $article->id;
+            $breukh->save();
+        }   
+
+            return dataCollection::RestRules(
+                "article de vente modifié avec succès", 
+                $article, 
+                true,
+                200
+            );
+   
     }
 
     /**

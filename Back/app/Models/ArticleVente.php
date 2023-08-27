@@ -15,7 +15,8 @@ class ArticleVente extends Model
     
     public function article()
     {
-        return $this->belongsToMany(Article::class, 'breukhs', 'article_vente_id', 'article_id');
+        return $this->belongsToMany(Article::class, 'breukhs', 'article_vente_id', 'article_id')
+                    ->withPivot('qte');
     }
     
     public function categorie()

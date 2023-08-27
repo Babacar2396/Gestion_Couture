@@ -1,6 +1,6 @@
 import { Component, Input, ViewChild, ViewChildren } from '@angular/core';
 import { ArticleService } from '../../services/article-service/article.service'; 
-import { Article } from '../../interfaces/article';
+import { Articles } from '../../interfaces/articles';
 import { Categorie } from '../../interfaces/paginated-categorie.interface';
 import { Fournisseur } from '../../interfaces/fournisseur';
 import { FormComponent } from './form/form.component';
@@ -19,9 +19,9 @@ export class ArticleComponent {
 
 id: number | null = null;
 
-@Input() articles: Article[]=[];
+@Input() articles: Articles[]=[];
 // @Input() article!: Article;
-@Input() editedArticle!: Article;
+@Input() editedArticle!: Articles;
 @Input() categories: Categorie[]=[];
 @Input() fournisseurs: Fournisseur[]=[];
 @ViewChild(FormComponent) formComponent!: FormComponent;
@@ -35,7 +35,7 @@ id: number | null = null;
   
   getData(){
     this.articleService.index().subscribe(
-      (      res: { data: { articles: Article[]; }; }) => {
+      (      res: { data: { articles: Articles[]; }; }) => {
         this.articles = res.data.articles;
         // console.log(this.articles);
       }
@@ -48,7 +48,7 @@ id: number | null = null;
     )
   }
 
-  addArticle(article: Article){
+  addArticle(article: Articles){
     this.articleService.store(article).subscribe(
       (      res: any)=>{
         console.log(res);
@@ -64,7 +64,7 @@ id: number | null = null;
     })
   }
 
-  updateArt(article: Article){
+  updateArt(article: Articles){
     this.articleService.update(article, article.id).subscribe(
       (      res: any)=>
       { console.log(res)
@@ -72,8 +72,8 @@ id: number | null = null;
       });
   }
 
-  editArticle(article: Article) {
-    const fournisseursArray = article.fournisseurs.map(fournisseur => fournisseur.nomComplet);
+  editArticle(article: Articles) {
+    const fournisseursArray = article.fournisseurs.map((fournisseur: { nomComplet: any; }) => fournisseur.nomComplet);
     const fournisseursString = fournisseursArray.join(', '); 
     this.formComponent.selectedFournisseurs = fournisseursArray;
     

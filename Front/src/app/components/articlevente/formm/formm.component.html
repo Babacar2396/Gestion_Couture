@@ -1,0 +1,99 @@
+
+<div class="container"
+    style="width: 70em; border: 2px solid; display: flex; justify-content: center; align-items: center;">
+    <form [formGroup]="artVenteForm" (ngSubmit)="onSubmit()">
+        <div class="row">
+            <div class="col" style="margin-left: 2em; margin-top: 2em;">
+                <div class="row">
+                    <div class="col">
+                        <label for="libelle" class="form-label">Libellé</label>
+                        <input style="width: 12em;" type="text" class="form-control" id="libelle"
+                            formControlName="libelle" required />
+                    </div>
+                    <div class="col">
+                        <label for="categorie" class="form-label">Catégorie</label>
+                        <select style="width: 12em;" class="form-select" formControlName="categorie">
+                            <option value="">Sélectionner une catégorie</option>
+                            <option value="categorie1">Catégorie 1</option>
+                            <option value="categorie2">Catégorie 2</option>
+                            <option value="categorie3">Catégorie 3</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div style="margin-top: 3em; margin-left: 2em;" class="col form-check">
+                        <input class="form-check-input" type="checkbox" id="promoCheckbox" formControlName="promo" />
+                        <label class="form-check-label" for="promoCheckbox">Promo</label>
+                    </div>
+                    <div class="col" style="margin-top: 2em; margin-left: -2em;">
+                        <label for="valeur" class="form-label">Valeur</label>
+                        <input style="width: 17em;" type="number" class="form-control" id="valeur"
+                            formControlName="valeur" />
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 2em;">
+                    <div class="d-flex">
+                        <h4> Articles de Confection </h4>
+                        <span (click)="addArticleConfection()" style="margin-left: 10em; margin-bottom: 0.5em; font-size: 1em; margin-left: 3em; cursor: pointer;" class="btn btn-primary">+</span>
+                    </div>
+                    <table class="table table-bordered" style="width: 10em;">
+                        <thead>
+                            <tr class="border">
+                                <th class="border">Libelle</th>
+                                <th class="border">Qte</th>
+                                <th class="border">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody formArrayName="articlesConfection">
+                            <tr class="border" *ngFor="let item of articlesConfection.controls; let i = index" [formGroupName]="i">                               
+                                <td>
+                                    <input style="width: 12em;" type="text" class="form-control" formControlName="lib" required />
+                                </td>
+                                <td>
+                                    <input style="width: 12em;" type="text" class="form-control" formControlName="qte" required />
+                                </td>
+                                <td>
+                                    <button (click)="removeArticleConfection(i)" class="btn btn-danger">X</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col" style="margin-left: 4em; margin-top: 2em;">
+                <div class="col">
+                    <label for="photo" style="cursor: pointer;">
+                        <img [src]="img" style="max-width: 100%; height: 10rem; border: 2px solid #ccc; padding: 15px; margin-bottom: 3.5rem;" />
+                    </label>
+                    <input type="file" id="photo" formControlName="" (change)="handleFileChange($event)"
+                        style="display: none;" required>
+                </div>
+                <div class="col">
+                    <label for="ref">REF</label>
+                    <input [value]="ref" style="width: 17em;" type="text" class="form-control" readonly />
+                </div>
+                <div class="col">
+                    <button style="margin-right: 17em; margin-top: 3em;" type="submit"
+                        class="btn btn-primary float-end">Sauvegarder</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <label style="margin-left: 3em;" for="coutFabrication" class="form-label">Coût de Fabrication</label>
+                <input style="width: 17em; margin-left: 2em;" [value]="cout" readonly type="number" class="form-control" id="coutFabrication" />
+            </div>
+            <div style="margin-left: -30em;" class="col">
+                <label for="marge" class="form-label">Marge/Article</label>
+                <input style="width: 17em;" type="number" class="form-control" id="marge" formControlName="marge" />
+            </div>
+        </div>
+        <div class="row mb-4">
+            <label style="margin-left: 3em;" for="prixVente" class="form-label">Prix de Vente</label>
+            <input [value]="pv" style="width: 17em; margin-left: 3em;" readonly type="number" class="form-control" id="prixVente" />
+        </div>
+
+    </form>
+</div>

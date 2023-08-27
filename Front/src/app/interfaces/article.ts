@@ -1,18 +1,11 @@
+import { Articles } from "./articles";
+import { Breukh } from "./breukh";
 import { Fournisseur } from "./fournisseur";
 import { Categorie } from "./paginated-categorie.interface";
 
-export interface Article {
-    id: number | null;
-    libelle: string;
-    categorie_id?: string;
-    categorie_libelle?: string;
-    categorie_numArticles?: number,
-    categorie?: Categorie;   
+export interface Article extends Articles {
     prix: string;
     stock: string;
-    fournisseurs: Fournisseur[],
-    ref?: string,
-    photo: string,
-    photo_name: any
-
+    fournisseurs: Fournisseur[];
+    pivot?: Breukh;
 }
